@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Env files with real values — never commit these
+.env
+.env.local
+.env.*.local
+
+# Keep examples
+!.env.example
+!.env.sample
+# Example .env files in this repo hold only fake values and are meant to be committed
+!examples/basic/.env
+!examples/drift/.env
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
