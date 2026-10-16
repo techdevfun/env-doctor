@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install pytest
+        run: pip install pytest
+      - name: Run tests
+        run: python -m pytest -q
+      - name: Smoke-test CLI on examples
+        run: |
+          python -m env_doctor check --env examples/basic/.env --example examples/basic/.env.example --format text || true
+          python -m env_doctor check --env examples/drift/.env --example examples/drift/.env.example --format json | python -c "import json,sys; d=json.load(sys.stdin); assert d['errors'] > 0, 'drift example should fail'"
