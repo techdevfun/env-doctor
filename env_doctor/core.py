@@ -96,7 +96,8 @@ def find_referenced_vars(root: Path) -> set[str]:
     """Scan code for env var references: getenv('X'), process.env.X, $X, ${X}."""
     patterns = [
         re.compile(r"""getenv\(\s*["']([A-Za-z_][A-Za-z0-9_]*)["']"""),
-        re.compile(r"""os\.environ(?:\.get)?\[\s*["']([A-Za-z_][A-Za-z0-9_]*)["']"""),
+        # Both os.environ["X"] and os.environ.get("X") forms.
+        re.compile(r"""os\.environ(?:\[\s*["']|\.get\(\s*["'])([A-Za-z_][A-Za-z0-9_]*)["']"""),
         re.compile(r"""process\.env\.([A-Za-z_][A-Za-z0-9_]*)"""),
         re.compile(r"""\$\{([A-Za-z_][A-Za-z0-9_]*)\}"""),
     ]
