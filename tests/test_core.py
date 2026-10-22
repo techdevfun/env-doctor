@@ -5,7 +5,19 @@ import subprocess
 import sys
 from pathlib import Path
 
-from env_doctor.core import audit, is_placeholder, looks_like_real_secret, shannon_entropy
+from env_doctor.core import audit, find_referenced_vars, is_placeholder, looks_like_real_secret, shannon_entropy
+
+
+def test_environ_get_form_detected(tmp_path: Path):
+    src = tmp_path / "app.py"
+    src.write_text(
+        'import os\n'
+        'DB_HOST = os.environ.get("DB_HOST")\n'
+        'API_KEY = os.environ["API_KEY"]\n'
+    )
+    found = find_referenced_vars(tmp_path)
+    assert "DB_HOST" in found  # paren form: os.environ.get("X")
+    assert "API_KEY" in found  # bracket form: os.environ["X"]
 
 
 def test_placeholder_detection():
