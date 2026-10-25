@@ -20,6 +20,21 @@ def test_environ_get_form_detected(tmp_path: Path):
     assert "API_KEY" in found  # bracket form: os.environ["X"]
 
 
+def test_bare_dollar_var_detected_and_pid_not(tmp_path: Path):
+    src = tmp_path / "deploy.sh"
+    src.write_text(
+        'curl -H "Authorization: $API_KEY" https://example.com\n'
+        'psql "$DB_URL"\n'
+        'echo $$ "pid, not a var"\n'
+        'echo \\$NOT_A_VAR "escaped literal"\n'
+    )
+    found = find_referenced_vars(tmp_path)
+    assert "API_KEY" in found  # bare $VAR in a double-quoted string
+    assert "DB_URL" in found  # bare $VAR as a bare argument
+    assert "NOT_A_VAR" not in found  # \$ is a literal dollar, not a reference
+    # $$ must not leak a bogus name either: nothing after $$ is a var here.
+
+
 def test_placeholder_detection():
     assert is_placeholder("changeme")
     assert is_placeholder("your-api-key-here")
