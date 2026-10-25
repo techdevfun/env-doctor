@@ -100,6 +100,10 @@ def find_referenced_vars(root: Path) -> set[str]:
         re.compile(r"""os\.environ(?:\[\s*["']|\.get\(\s*["'])([A-Za-z_][A-Za-z0-9_]*)["']"""),
         re.compile(r"""process\.env\.([A-Za-z_][A-Za-z0-9_]*)"""),
         re.compile(r"""\$\{([A-Za-z_][A-Za-z0-9_]*)\}"""),
+        # Bare $VAR in shell scripts and double-quoted strings. The
+        # lookbehind skips $$ (PID) and \$ (escaped literal dollar) so
+        # neither is mistaken for a variable reference.
+        re.compile(r"""(?<![\$\\])\$([A-Za-z_][A-Za-z0-9_]*)"""),
     ]
     found: set[str] = set()
     exts = {".py", ".js", ".ts", ".tsx", ".jsx", ".sh", ".rb", ".go", ".rs", ".java"}
