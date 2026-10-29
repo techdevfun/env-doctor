@@ -98,7 +98,9 @@ def find_referenced_vars(root: Path) -> set[str]:
         re.compile(r"""getenv\(\s*["']([A-Za-z_][A-Za-z0-9_]*)["']"""),
         # Both os.environ["X"] and os.environ.get("X") forms.
         re.compile(r"""os\.environ(?:\[\s*["']|\.get\(\s*["'])([A-Za-z_][A-Za-z0-9_]*)["']"""),
-        re.compile(r"""process\.env\.([A-Za-z_][A-Za-z0-9_]*)"""),
+        # Both process.env.X and process.env["X"] forms (bracket access is
+        # common for dynamic keys or keys with dashes).
+        re.compile(r"""process\.env(?:\.\s*|\[\s*["'])([A-Za-z_][A-Za-z0-9_]*)"""),
         re.compile(r"""\$\{([A-Za-z_][A-Za-z0-9_]*)\}"""),
         # Bare $VAR in shell scripts and double-quoted strings. The
         # lookbehind skips $$ (PID) and \$ (escaped literal dollar) so
