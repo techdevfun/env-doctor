@@ -20,6 +20,30 @@ def test_environ_get_form_detected(tmp_path: Path):
     assert "API_KEY" in found  # bracket form: os.environ["X"]
 
 
+def test_process_env_bracket_form_detected(tmp_path: Path):
+    src = tmp_path / "app.js"
+    src.write_text(
+        'const key = process.env["API_KEY"];\n'
+        "const other = process.env['DB_URL'];\n"
+        'const plain = process.env.PORT;\n'
+    )
+    found = find_referenced_vars(tmp_path)
+    assert "API_KEY" in found  # bracket form: process.env["X"]
+    assert "DB_URL" in found  # single-quoted bracket form
+    assert "PORT" in found  # dot form still works
+
+
+def test_bracket_ref_not_flagged_unused(tmp_path: Path):
+    env = tmp_path / ".env"
+    env.write_text("API_KEY=abc123\n")
+    ex = tmp_path / ".env.example"
+    ex.write_text("API_KEY=\n")
+    code = tmp_path / "app.js"
+    code.write_text('const key = process.env["API_KEY"];\n')
+    result = audit(env, ex, scan_root=tmp_path)
+    assert "possibly-unused" not in {i["code"] for i in result["issues"]}
+
+
 def test_bare_dollar_var_detected_and_pid_not(tmp_path: Path):
     src = tmp_path / "deploy.sh"
     src.write_text(
