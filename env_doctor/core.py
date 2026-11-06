@@ -107,8 +107,16 @@ def find_referenced_vars(root: Path) -> set[str]:
         # neither is mistaken for a variable reference.
         re.compile(r"""(?<![\$\\])\$([A-Za-z_][A-Za-z0-9_]*)"""),
     ]
+    # Destructuring: const { API_KEY, DB_URL } = process.env — the most
+    # common way to pull several vars at once, and the key names never
+    # appear next to "process.env." so the patterns above miss them.
+    # Handled separately because one match yields several names, and the
+    # env name sits before ":" (renamed: API_KEY: apiKey) or "="
+    # (defaulted: PORT = 3000) in each entry.
+    destructure_re = re.compile(r"\{([^{}]*)\}\s*=\s*process\.env\b")
+    name_re = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
     found: set[str] = set()
-    exts = {".py", ".js", ".ts", ".tsx", ".jsx", ".sh", ".rb", ".go", ".rs", ".java"}
+    exts = {".py", ".js", ".ts", ".tsx", ".jsx", ".mjs", ".cjs", ".sh", ".rb", ".go", ".rs", ".java"}
     for p in root.rglob("*"):
         if not p.is_file():
             continue
@@ -123,6 +131,11 @@ def find_referenced_vars(root: Path) -> set[str]:
             continue
         for pat in patterns:
             found.update(pat.findall(text))
+        for block in destructure_re.findall(text):
+            for entry in block.split(","):
+                name = entry.split(":")[0].split("=")[0].strip()
+                if name_re.match(name):
+                    found.add(name)
     return found
 
 
