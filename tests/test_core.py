@@ -44,6 +44,45 @@ def test_bracket_ref_not_flagged_unused(tmp_path: Path):
     assert "possibly-unused" not in {i["code"] for i in result["issues"]}
 
 
+def test_process_env_destructuring_detected(tmp_path: Path):
+    src = tmp_path / "app.js"
+    src.write_text(
+        "const { API_KEY, DB_URL } = process.env;\n"
+        "const { PORT = 3000 } = process.env;\n"
+        "const { SECRET_KEY: secretKey } = process.env;\n"
+    )
+    found = find_referenced_vars(tmp_path)
+    assert "API_KEY" in found  # plain destructured name
+    assert "DB_URL" in found
+    assert "PORT" in found  # defaulted form keeps the env name
+    assert "SECRET_KEY" in found  # renamed form: env name, not local name
+    assert "secretKey" not in found  # local alias is not an env var
+
+
+def test_destructuring_not_flagged_unused(tmp_path: Path):
+    env = tmp_path / ".env"
+    env.write_text("API_KEY=abc123\nPORT=3000\n")
+    ex = tmp_path / ".env.example"
+    ex.write_text("API_KEY=\nPORT=\n")
+    code = tmp_path / "app.js"
+    code.write_text(
+        "const port = process.env.PORT;\n"
+        "const { API_KEY } = process.env;\n"
+    )
+    result = audit(env, ex, scan_root=tmp_path)
+    assert "possibly-unused" not in {i["code"] for i in result["issues"]}
+
+
+def test_mjs_and_cjs_files_scanned(tmp_path: Path):
+    mjs = tmp_path / "app.mjs"
+    mjs.write_text("const k = process.env.API_KEY;\n")
+    cjs = tmp_path / "app.cjs"
+    cjs.write_text("const u = process.env.DB_URL;\n")
+    found = find_referenced_vars(tmp_path)
+    assert "API_KEY" in found  # .mjs was skipped before
+    assert "DB_URL" in found  # .cjs was skipped before
+
+
 def test_bare_dollar_var_detected_and_pid_not(tmp_path: Path):
     src = tmp_path / "deploy.sh"
     src.write_text(
