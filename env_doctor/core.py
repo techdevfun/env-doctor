@@ -117,7 +117,10 @@ def find_referenced_vars(root: Path) -> set[str]:
     name_re = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
     found: set[str] = set()
     exts = {".py", ".js", ".ts", ".tsx", ".jsx", ".mjs", ".cjs", ".sh", ".rb", ".go", ".rs", ".java"}
-    for p in root.rglob("*"):
+    # A single file passed as the scan root has no children to rglob,
+    # so scan it directly instead of silently finding nothing.
+    candidates = [root] if root.is_file() else root.rglob("*")
+    for p in candidates:
         if not p.is_file():
             continue
         if p.suffix not in exts:
