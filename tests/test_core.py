@@ -161,6 +161,21 @@ def test_cli_json_output(tmp_path: Path):
     assert data["keys"] == ["A"]
 
 
+def test_scan_single_file_flags_unused(tmp_path: Path):
+    env = tmp_path / ".env"
+    env.write_text("USED=1\nDEAD=1\n")
+    ex = tmp_path / ".env.example"
+    ex.write_text("USED=\nDEAD=\n")
+    code = tmp_path / "app.py"
+    code.write_text("import os\nx = os.getenv('USED')\n")
+    # Scanning one file must behave like scanning its directory.
+    assert "USED" in find_referenced_vars(code)
+    result = audit(env, ex, scan_root=code)
+    codes = {i["code"] for i in result["issues"]}
+    assert "possibly-unused" in codes
+    assert any(i["key"] == "DEAD" for i in result["issues"] if i["code"] == "possibly-unused")
+
+
 def test_unused_var_warning(tmp_path: Path):
     env = tmp_path / ".env"
     env.write_text("USED=1\nDEAD=1\n")
