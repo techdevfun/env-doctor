@@ -7,6 +7,7 @@ import json
 import sys
 from pathlib import Path
 
+from . import __version__
 from .core import audit
 
 
@@ -15,7 +16,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="env-doctor",
         description="Audit .env files: drift vs .env.example, placeholders, risky secrets, unused vars.",
     )
-    p.add_argument("--version", action="version", version="env-doctor 0.1.0")
+    p.add_argument("--version", action="version", version=f"env-doctor {__version__}")
     sub = p.add_subparsers(dest="command", required=True)
 
     check = sub.add_parser("check", help="Audit one .env file.")
