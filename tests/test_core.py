@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from env_doctor.core import audit, find_referenced_vars, is_placeholder, looks_like_real_secret, shannon_entropy
+from env_doctor.core import apply_fix, audit, find_referenced_vars, is_placeholder, looks_like_real_secret, shannon_entropy
 
 
 def test_environ_get_form_detected(tmp_path: Path):
@@ -187,3 +187,76 @@ def test_unused_var_warning(tmp_path: Path):
     codes = {i["code"] for i in result["issues"]}
     assert "possibly-unused" in codes
     assert any(i["key"] == "DEAD" for i in result["issues"] if i["code"] == "possibly-unused")
+
+
+def test_fix_adds_missing_keys_as_empty_placeholders(tmp_path: Path):
+    env = tmp_path / ".env"
+    env.write_text("DATABASE_URL=postgres://localhost:5432/app\nNEW_API_URL=https://api.example.com\n")
+    ex = tmp_path / ".env.example"
+    ex.write_text("DATABASE_URL=\n")
+    added = apply_fix(env, ex)
+    assert added == ["NEW_API_URL"]
+    text = ex.read_text()
+    assert "NEW_API_URL=\n" in text
+    # Real values must never be copied into the example file.
+    assert "postgres://localhost" not in text
+    assert "https://api.example.com" not in text
+    assert "DATABASE_URL=\n" in text  # existing line untouched
+
+
+def test_fix_creates_example_when_missing(tmp_path: Path):
+    env = tmp_path / ".env"
+    env.write_text("A=1\nB=2\n")
+    ex = tmp_path / ".env.example"
+    assert not ex.exists()
+    added = apply_fix(env, ex)
+    assert added == ["A", "B"]
+    assert ex.exists()
+    text = ex.read_text()
+    assert "A=\n" in text
+    assert "B=\n" in text
+    # Real values must never be copied into the example file.
+    assert "A=1" not in text
+    assert "B=2" not in text
+
+
+def test_fix_is_idempotent(tmp_path: Path):
+    env = tmp_path / ".env"
+    env.write_text("A=1\nB=2\n")
+    ex = tmp_path / ".env.example"
+    ex.write_text("A=\n")
+    assert apply_fix(env, ex) == ["B"]
+    assert apply_fix(env, ex) == []
+    assert ex.read_text() == "A=\nB=\n"
+
+
+def test_fix_preserves_comments_and_handles_missing_newline(tmp_path: Path):
+    env = tmp_path / ".env"
+    env.write_text("OLD=1\nNEW=2\n")
+    ex = tmp_path / ".env.example"
+    ex.write_text("# keep this comment\nOLD=")  # no trailing newline
+    assert apply_fix(env, ex) == ["NEW"]
+    assert ex.read_text() == "# keep this comment\nOLD=\nNEW=\n"
+
+
+def test_cli_fix_flag(tmp_path: Path):
+    env = tmp_path / ".env"
+    env.write_text("A=1\nB=2\n")
+    ex = tmp_path / ".env.example"
+    ex.write_text("A=\n")
+    out = subprocess.run(
+        [sys.executable, "-m", "env_doctor", "check", "--env", str(env),
+         "--example", str(ex), "--fix"],
+        capture_output=True, text=True,
+    )
+    assert out.returncode == 0
+    assert "Fixed: added 1 key(s)" in out.stdout
+    assert "B=" in ex.read_text()
+    # Second run: nothing left to fix, still passes.
+    out2 = subprocess.run(
+        [sys.executable, "-m", "env_doctor", "check", "--env", str(env),
+         "--example", str(ex), "--fix"],
+        capture_output=True, text=True,
+    )
+    assert out2.returncode == 0
+    assert "Nothing to fix" in out2.stdout
