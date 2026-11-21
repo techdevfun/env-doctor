@@ -142,6 +142,35 @@ def find_referenced_vars(root: Path) -> set[str]:
     return found
 
 
+def apply_fix(env_path: Path, example_path: Path) -> list[str]:
+    """Add keys that are in .env but missing in .env.example, as empty placeholders.
+
+    Only ever writes ``KEY=`` (empty value) — real values from .env are
+    never copied into the example file, so no secret can leak through --fix.
+    Creates the example file when it does not exist yet.
+    Returns the sorted list of keys added (empty when nothing was missing).
+    """
+    env_values, _ = parse_env_file(env_path)
+    if not env_values:
+        return []
+    example_values: dict[str, str] = {}
+    if example_path.exists():
+        example_values, _ = parse_env_file(example_path)
+    missing = sorted(set(env_values) - set(example_values))
+    if not missing:
+        return []
+    if example_path.exists():
+        text = example_path.read_text(encoding="utf-8", errors="replace")
+        if text and not text.endswith("\n"):
+            text += "\n"
+    else:
+        text = ("# .env.example — copy to .env and fill in real values.\n"
+                "# Keys below were added by `env-doctor check --fix` with empty values on purpose.\n")
+    text += "".join(f"{key}=\n" for key in missing)
+    example_path.write_text(text, encoding="utf-8")
+    return missing
+
+
 def audit(env_path: Path, example_path: Path | None = None, scan_root: Path | None = None) -> dict:
     env_values, issues = parse_env_file(env_path)
     example_values: dict[str, str] = {}
