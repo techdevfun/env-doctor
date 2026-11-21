@@ -14,7 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.11", "3.12"]
+        # Python 3.9 was dropped 2026-11-21: it is past EOL (2025-10-31) and
+        # setup-python can no longer provision it on ubuntu-latest
+        # (the "Set up Python" step fails in ~5s, even on a version-bump-only
+        # commit). The code itself uses no 3.10+ syntax.
+        python-version: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
