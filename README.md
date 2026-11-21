@@ -56,7 +56,7 @@ Summary: 2 error(s), 2 warning(s), 3 key(s).
 git clone https://github.com/techdevfun/env-doctor.git
 cd env-doctor
 
-# 2. No dependencies to install (Python 3.9+ stdlib only).
+# 2. No dependencies to install (Python 3.10+ stdlib only).
 #    Optional: install the `env-doctor` command
 pip install -e .
 
@@ -96,7 +96,7 @@ Add this to your workflow:
   run: python -m env_doctor check --env .env --example .env.example --format text
 ```
 
-This repo runs the same check in `.github/workflows/ci.yml` on Python 3.9, 3.11, and 3.12.
+This repo runs the same check in `.github/workflows/ci.yml` on Python 3.11 and 3.12.
 
 ## Roadmap
 
