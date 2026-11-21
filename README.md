@@ -78,6 +78,11 @@ python -m env_doctor check --env examples/drift/.env --example examples/drift/.e
 
 # Also flag vars not referenced in code
 python -m env_doctor check --env .env --example .env.example --scan .
+
+# Fix drift the safe way: add keys that are in .env but missing in
+# .env.example as empty placeholders, then re-check. Real values are
+# never copied into the example file.
+python -m env_doctor check --env .env --example .env.example --fix
 ```
 
 See `examples/` for the three setups: `basic/` (clean), `drift/` (broken on purpose), `ci/` (shell wrapper for CI).
@@ -95,7 +100,7 @@ This repo runs the same check in `.github/workflows/ci.yml` on Python 3.9, 3.11,
 
 ## Roadmap
 
-- [ ] `--fix` to auto-add missing keys to `.env.example` as empty placeholders
+- [x] `--fix` to auto-add missing keys to `.env.example` as empty placeholders (v0.2.0)
 - [ ] `--strict` to turn selected warnings into errors
 - [ ] Support `.env.local`, `.env.production` layering checks
 - [ ] SARIF output for GitHub code scanning
